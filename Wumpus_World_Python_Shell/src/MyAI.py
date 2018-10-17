@@ -25,13 +25,13 @@ class MyAI ( Agent ):
         # ======================================================================
         # YOUR CODE BEGINS
         # ======================================================================
-        
+
         self.grabbed = False
         self.wumpus_shot = False
-        self.traveled = dict()
-        self.pos = [1, 2]
+        self.record = dict()
+        self.pos = [1, 1]
         self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
-        pass
+
         # ======================================================================
         # YOUR CODE ENDS
         # ======================================================================
@@ -42,26 +42,28 @@ class MyAI ( Agent ):
         # ======================================================================
         if self.grabbed:
             return self.escape(stench, breeze, glitter, bump, scream)
-        
 
-        
+
+
         return Agent.Action.CLIMB
         # ======================================================================
         # YOUR CODE ENDS
         # ======================================================================
-    
+
     # ======================================================================
     # YOUR CODE BEGINS
     # ======================================================================
-    def recordMove(self, row, col):
-        if row in record.keys():
-            record[row] = set(col)
+    def recordMove(self, x, y):
+        if row in self.record.keys():
+            record[x] = set(y)
         else:
-            record[row].add(col)
+            record[x].add(y)
 
     def escape(self, stench, breeze, glitter, bump, scream):
         pass
-    
+
+
+
     # ======================================================================
     # YOUR CODE ENDS
     # ======================================================================
