@@ -1,7 +1,7 @@
 # ======================================================================
 # FILE:        MyAI.py
 #
-# AUTHOR:      Abdullah Younis, VInh Truong
+# AUTHOR:      Abdullah Younis, Vinh Truong, Brian Chou
 #
 # DESCRIPTION: This file contains your agent class, which you will
 #              implement. You are responsible for implementing the
@@ -28,8 +28,9 @@ class MyAI ( Agent ):
         
         self.grabbed = False
         self.wumpus_shot = False
-        self.pos = (1, 1)
-        self.direction = "right"
+        self.traveled = dict()
+        self.pos = [1, 2]
+        self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
         pass
         # ======================================================================
         # YOUR CODE ENDS
@@ -52,8 +53,14 @@ class MyAI ( Agent ):
     # ======================================================================
     # YOUR CODE BEGINS
     # ======================================================================
-    def escape(self, stench, breeze, glitter, bump, scream):
+    def recordMove(self, row, col):
+        if row in record.keys():
+            record[row] = set(col)
+        else:
+            record[row].add(col)
 
+    def escape(self, stench, breeze, glitter, bump, scream):
+        pass
     
     # ======================================================================
     # YOUR CODE ENDS
