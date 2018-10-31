@@ -50,6 +50,7 @@ class MyAI ( Agent ):
         # ======================================================================
 
         # all parameters are boolean values
+
         if self.glitter:
             return self.make_move(Agent.Action.GRAB)
 
@@ -72,7 +73,7 @@ class MyAI ( Agent ):
     # ======================================================================
 
     ############################ HELPER ########################################
-    
+
     def __get_adj(self):
         result = set()
         x, y = self.pos
@@ -84,14 +85,14 @@ class MyAI ( Agent ):
             result.add(x+1,y)
         if self.y_max and self.pos[1] < self.y_max:
             result.add(x,y+1)
-        
+
         return result
 
     def __calculate_cost(self, x, y):
         danger = 1.0 - self.safety_value[(x, y)]
         danger *= 1000
         return danger
-    
+
     def __min_distance(self, x1, y1, x2, y2, facing):
         """
         Hueristic function to estimate the cost from start (x1, y1) to goal (x2, y2)
@@ -115,11 +116,11 @@ class MyAI ( Agent ):
             xdir, ydir = (facing-1)*(-1), 0
         else:
             xdir, ydir = 0, (facing-2)*(-1)
-        
+
         if dx != xdir*abs(dx) and dy != ydir*abs(dy):
             return 1 + dx + dy
         return dx + dy
-    
+
     def __find_path(self, x1, y1, x2, y2, facing):
         """
         Uses A* search algorithm to find any valid path while avoiding
@@ -142,12 +143,12 @@ class MyAI ( Agent ):
         search.append(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
         while len(search) != 0:
             expand = heapq.heappop(search)
-            
+
             record.append(expand) # add parent index
             # index of parent for all expanded nodes is len(record) - 1
 
-            heapq.heappush(search, 
-                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction+1)%4)+expand.cost+1, 
+            heapq.heappush(search,
+                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction+1)%4)+expand.cost+1,
                 expand.cost+1,
                 expand.x,
                 expand.y,
@@ -155,8 +156,8 @@ class MyAI ( Agent ):
                 len(record)-1,
                 Agent.Action.TURN_LEFT)
             )
-            heapq.heappush(search, 
-                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction-1)%4)+expand.cost+1, 
+            heapq.heappush(search,
+                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction-1)%4)+expand.cost+1,
                 expand.cost+1,
                 expand.x,
                 expand.y,
@@ -173,9 +174,9 @@ class MyAI ( Agent ):
                 new_x, new_y = expand.x-1, expand.y
             elif expand.direction == 3:
                 new_x, new_y = expand.x, expand.y-1
-            
+
             if new_x == x2 and new_y == y2:
-                record.append(Node(self.__calculate_cost(new_x, new_y)+expand.cost+1, 
+                record.append(Node(self.__calculate_cost(new_x, new_y)+expand.cost+1,
                     self.__calculate_cost(new_x, new_y)+expand.cost+1,
                     new_x,
                     new_y,
@@ -185,8 +186,8 @@ class MyAI ( Agent ):
                 )
                 break
 
-            heapq.heappush(search, 
-                Node(self.__min_distance(new_x, new_y, x2, y2, expand.direction)+self.__calculate_cost(new_x, new_y)+expand.cost+1, 
+            heapq.heappush(search,
+                Node(self.__min_distance(new_x, new_y, x2, y2, expand.direction)+self.__calculate_cost(new_x, new_y)+expand.cost+1,
                 self.__calculate_cost(new_x, new_y)+expand.cost+1,
                 new_x,
                 new_y,
@@ -205,6 +206,7 @@ class MyAI ( Agent ):
         return result
 
     ############################ MOVEMENT ######################################
+
 
     def make_move(self, move):
         """
@@ -232,7 +234,7 @@ class MyAI ( Agent ):
         self.last_move = move
         
         return move
-    
+
     def calculate_safety(self, stench, breeze):
         """
         Will primitively calculate the danger of each space traveled based
@@ -251,6 +253,7 @@ class MyAI ( Agent ):
                 if stench:
                     self.safety_value[space] *= 0.33
                 if breeze:
+
                     self.safety_value[space] *= 0.33
     
     def update_frontier(self):
@@ -270,8 +273,9 @@ class MyAI ( Agent ):
     def search_gold(self, goal_x, goal_y):
         self.move_list = self.__find_path(self.pos[0], self.pos[1], goal_x, goal_y)
 
-    def escape():
-        pass
+    def escape(self):
+        self.move_list = [(agent.Action.CLIMB, 1)]
+        self.move_list.extend(self.__find_path(self.pos[0], self.pos[1], 1, 1, self.direction))
 
 
     # ======================================================================
