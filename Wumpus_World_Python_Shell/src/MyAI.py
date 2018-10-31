@@ -29,12 +29,13 @@ class MyAI ( Agent ):
         # ======================================================================
 
         self.pos = (1,1)
-        self.last_move = self.pos
+        self.prev_pos = self.pos
+        self.last_move = None
         self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
         self.goal = None
-        self.frontier = list()
+        self.frontier = [(1, 2), (2, 1)]
         self.safety_value = defaultdict(lambda:1.0) # float is percentage that the square is safe
-        self.traversed = set()
+        self.traversed = {(1, 1)}
         self.move_list = list()
         self.grabbed = False
         self.x_max = None
@@ -50,20 +51,30 @@ class MyAI ( Agent ):
         # ======================================================================
 
         # all parameters are boolean values
+        print("hello")
 
-        if self.glitter:
+        if glitter:
+            print("glitter")
             return self.make_move(Agent.Action.GRAB)
-
-        if self.last_move == Agent.Action.FORWARD:
-            self.calculate_safety(stench, breeze)
-            if breeze or stench:
-                self.search_gold(self.goal[0], self.goal[1])
             
-        if len(self.move_list) == 0:
+        while len(self.move_list) == 0:
+            if len(self.frontier) == 0:
+                self.escape()
+                break
             self.goal = self.frontier.pop()
+            print(self.goal, self.pos, self.direction)
             self.search_gold(self.goal[0], self.goal[1])
+            if sum([x[1] for x in self.move_list]) > 100:
+                self.move_list = []
 
-        return self.move_list.pop()[0]
+        if breeze or stench:
+            self.calculate_safety(stench, breeze)
+            print(self.goal, self.pos)
+            self.search_gold(self.goal[0], self.goal[1])
+        
+        print(self.move_list[-1])
+
+        return self.make_move(self.move_list.pop()[0])
         # ======================================================================
         # YOUR CODE ENDS
         # ======================================================================
@@ -77,14 +88,20 @@ class MyAI ( Agent ):
     def __get_adj(self):
         result = set()
         x, y = self.pos
-        if self.pos[0] > 1:
-            result.add(x-1,y)
-        if self.pos[1] > 1:
-            result.add(x,y-1)
-        if self.x_max and self.pos[0] < self.x_max:
-            result.add(x+1,y)
-        if self.y_max and self.pos[1] < self.y_max:
-            result.add(x,y+1)
+        # if self.pos[0] > 1:
+        #     result.add((x-1,y))
+        # if self.pos[1] > 1:
+        #     result.add((x,y-1))
+        # if self.x_max and self.pos[0] < self.x_max:
+        #     result.add((x+1,y))
+        # if self.y_max and self.pos[1] < self.y_max:
+        #     result.add((x,y+1))
+        result.add((x+1, y))
+        result.add((x, y+1))
+        if x > 1:
+            result.add((x-1, y))
+        if y > 1:
+            result.add((x, y-1))
 
         return result
 
@@ -118,8 +135,8 @@ class MyAI ( Agent ):
             xdir, ydir = 0, (facing-2)*(-1)
 
         if dx != xdir*abs(dx) and dy != ydir*abs(dy):
-            return 1 + dx + dy
-        return dx + dy
+            return 1 + abs(dx) + abs(dy)
+        return abs(dx) + abs(dy)
 
     def __find_path(self, x1, y1, x2, y2, facing):
         """
@@ -137,34 +154,19 @@ class MyAI ( Agent ):
         IMPORTANT: The returned list is in REVERSE order, so use pop() to get
         the actual order of operations
         """
+        if x1 == x2 and y1 == y2:
+            return []
         Node = namedtuple("Node", ["f", "cost", "x", "y", "direction", "parent", "action"])
         record = []
         search = []
+        traversed = set()
         search.append(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
+        traversed.add(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
         while len(search) != 0:
             expand = heapq.heappop(search)
 
             record.append(expand) # add parent index
             # index of parent for all expanded nodes is len(record) - 1
-
-            heapq.heappush(search,
-                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction+1)%4)+expand.cost+1,
-                expand.cost+1,
-                expand.x,
-                expand.y,
-                (expand.direction+1)%4,
-                len(record)-1,
-                Agent.Action.TURN_LEFT)
-            )
-            heapq.heappush(search,
-                Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction-1)%4)+expand.cost+1,
-                expand.cost+1,
-                expand.x,
-                expand.y,
-                (expand.direction-1)%4,
-                len(record)-1,
-                Agent.Action.TURN_RIGHT)
-            )
 
             if expand.direction == 0:
                 new_x, new_y = expand.x+1, expand.y
@@ -175,26 +177,43 @@ class MyAI ( Agent ):
             elif expand.direction == 3:
                 new_x, new_y = expand.x, expand.y-1
 
-            if new_x == x2 and new_y == y2:
-                record.append(Node(self.__calculate_cost(new_x, new_y)+expand.cost+1,
-                    self.__calculate_cost(new_x, new_y)+expand.cost+1,
-                    new_x,
-                    new_y,
-                    expand.direction,
-                    len(record)-1,
-                    Agent.Action.FORWARD)
-                )
-                break
-
-            heapq.heappush(search,
-                Node(self.__min_distance(new_x, new_y, x2, y2, expand.direction)+self.__calculate_cost(new_x, new_y)+expand.cost+1,
+            left = Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction+1)%4)+expand.cost+1,
+                expand.cost+1,
+                expand.x,
+                expand.y,
+                (expand.direction+1)%4,
+                len(record)-1,
+                Agent.Action.TURN_LEFT)
+            right = Node(self.__min_distance(expand.x, expand.y, x2, y2, (expand.direction-1)%4)+expand.cost+1,
+                expand.cost+1,
+                expand.x,
+                expand.y,
+                (expand.direction-1)%4,
+                len(record)-1,
+                Agent.Action.TURN_RIGHT)
+            forward = Node(self.__min_distance(new_x, new_y, x2, y2, expand.direction)+self.__calculate_cost(new_x, new_y)+expand.cost+1,
                 self.__calculate_cost(new_x, new_y)+expand.cost+1,
                 new_x,
                 new_y,
                 expand.direction,
                 len(record)-1,
                 Agent.Action.FORWARD)
-            )
+
+            if new_x == x2 and new_y == y2:
+                record.append(forward)
+                break
+            
+            if left not in traversed:
+                heapq.heappush(search, left)
+                traversed.add(left)
+
+            if right not in traversed:
+                heapq.heappush(search, right)
+                traversed.add(right)
+
+            if forward not in traversed and new_x > 0 and new_y > 0:
+                heapq.heappush(search, forward)
+                traversed.add(forward)
 
         parent = record[-1].parent
         result = [(record[-1].action, record[-1].cost)]
@@ -217,7 +236,10 @@ class MyAI ( Agent ):
             self.grabbed = True
             self.goal = (1,1)
             self.escape()
+
         elif move == Agent.Action.FORWARD:
+            self.prev_pos = self.pos
+
             if self.direction == 0:
                 self.pos = (self.pos[0]+1, self.pos[1])
             elif self.direction == 1:
@@ -226,6 +248,11 @@ class MyAI ( Agent ):
                 self.pos = (self.pos[0]-1, self.pos[1])
             elif self.direction == 3:
                 self.pos = (self.pos[0], self.pos[1]-1)
+
+            self.traversed.add(self.pos)
+
+            self.update_frontier()
+            
         elif move == Agent.Action.TURN_LEFT:
             self.direction = (self.direction+1)%4
         elif move == Agent.Action.TURN_RIGHT:
@@ -248,7 +275,8 @@ class MyAI ( Agent ):
         None
         """
         if stench or breeze:
-            spaces = self.__get_adj().discard(self.prev_pos)
+            spaces = self.__get_adj()
+            spaces.discard(self.prev_pos)
             for space in spaces:
                 if stench:
                     self.safety_value[space] *= 0.33
@@ -267,14 +295,16 @@ class MyAI ( Agent ):
         for elem in self.__get_adj():
             if elem not in self.traversed:
                 self.frontier.append(elem)
+                self.traversed.add(elem)
             self.safety_value[elem] # Touch the spot
-        self.frontier.sort(lambda x: -(self.__min_distance(self.pos[0],self.pos[1],x[0],x[1])))
+        self.frontier.sort(key=lambda x: -(self.__min_distance(self.pos[0],self.pos[1],x[0],x[1],self.direction)))
 
     def search_gold(self, goal_x, goal_y):
-        self.move_list = self.__find_path(self.pos[0], self.pos[1], goal_x, goal_y)
+        self.move_list = self.__find_path(self.pos[0], self.pos[1], goal_x, goal_y, self.direction)
 
     def escape(self):
-        self.move_list = [(agent.Action.CLIMB, 1)]
+        print("escaping")
+        self.move_list = [(Agent.Action.CLIMB, 1)]
         self.move_list.extend(self.__find_path(self.pos[0], self.pos[1], 1, 1, self.direction))
 
 
