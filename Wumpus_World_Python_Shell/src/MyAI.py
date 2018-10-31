@@ -53,26 +53,35 @@ class MyAI ( Agent ):
         # all parameters are boolean values
         print("hello")
 
+        # This block grabs the gold and sets goal to 1,1
         if glitter:
-            print("glitter")
+            # print("glitter")
             return self.make_move(Agent.Action.GRAB)
             
+        # This block JUST fetches the next destination once one is reached
         while len(self.move_list) == 0:
             if len(self.frontier) == 0:
                 self.escape()
                 break
             self.goal = self.frontier.pop()
-            print(self.goal, self.pos, self.direction)
+            # print(self.goal, self.pos, self.direction)
             self.search_gold(self.goal[0], self.goal[1])
-            if sum([x[1] for x in self.move_list]) > 100:
-                self.move_list = []
 
+        # This block reevalutates the path based on breeze and stench info
         if breeze or stench:
             self.calculate_safety(stench, breeze)
             print(self.goal, self.pos)
             self.search_gold(self.goal[0], self.goal[1])
         
-        print(self.move_list[-1])
+        while self.__path_cost() > 500:
+            if len(self.frontier) == 0:
+                self.escape()
+                break
+            self.goal = self.frontier.pop()
+            self.search_gold(self.goal[0], self.goal[1])
+        
+        # print(self.move_list)
+        print(self.__path_cost(), self.move_list[-1][1])
 
         return self.make_move(self.move_list.pop()[0])
         # ======================================================================
@@ -161,7 +170,7 @@ class MyAI ( Agent ):
         search = []
         traversed = set()
         search.append(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
-        traversed.add(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
+        traversed.add((x1, y1, facing))
         while len(search) != 0:
             expand = heapq.heappop(search)
 
@@ -203,17 +212,17 @@ class MyAI ( Agent ):
                 record.append(forward)
                 break
             
-            if left not in traversed:
+            if ((left.x, left.y, left.direction)) not in traversed:
                 heapq.heappush(search, left)
-                traversed.add(left)
+                traversed.add((left.x, left.y, left.direction))
 
-            if right not in traversed:
+            if ((right.x, right.y, right.direction)) not in traversed:
                 heapq.heappush(search, right)
-                traversed.add(right)
+                traversed.add((right.x, right.y, right.direction))
 
-            if forward not in traversed and new_x > 0 and new_y > 0:
+            if ((forward.x, forward.y, forward.direction)) not in traversed and new_x > 0 and new_y > 0:
                 heapq.heappush(search, forward)
-                traversed.add(forward)
+                traversed.add((forward.x, forward.y, forward.direction))
 
         parent = record[-1].parent
         result = [(record[-1].action, record[-1].cost)]
@@ -224,6 +233,11 @@ class MyAI ( Agent ):
 
         return result
 
+    def __path_cost(self):
+        total = 0
+        for move in self.move_list:
+            total += move[1]
+        return total
     ############################ MOVEMENT ######################################
 
 
