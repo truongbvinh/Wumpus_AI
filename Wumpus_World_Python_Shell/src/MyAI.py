@@ -29,16 +29,16 @@ class MyAI ( Agent ):
         # ======================================================================
 
         self.pos = (1,1)
+        self.last_move = self.pos
         self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
+        self.goal = None
         self.frontier = list()
-        self.record = defaultdict(lambda:1.0) # float is percentage that the square is safe
+        self.safety_value = defaultdict(lambda:1.0) # float is percentage that the square is safe
         self.traversed = set()
         self.move_list = list()
         self.grabbed = False
         self.x_max = None
         self.y_max = None
-        self.wumpus_shot = False
-        self.last_move = None
 
         # ======================================================================
         # YOUR CODE ENDS
@@ -50,16 +50,18 @@ class MyAI ( Agent ):
         # ======================================================================
 
         # all parameters are boolean values
-        if self.grabbed:
-            return self.escape()
+
+        if self.glitter:
+            return self.make_move(Agent.Action.GRAB)
 
         if self.last_move == Agent.Action.FORWARD:
             self.calculate_safety(stench, breeze)
-
+            if breeze or stench:
+                self.search_gold(self.goal[0], self.goal[1])
+            
         if len(self.move_list) == 0:
-            goal = self.frontier.pop()
-            self.move_list = self.__find_path(self.pos[0], self.pos[1], goal[0], goal[1])
-
+            self.goal = self.frontier.pop()
+            self.search_gold(self.goal[0], self.goal[1])
 
         return self.move_list.pop()[0]
         # ======================================================================
@@ -71,11 +73,6 @@ class MyAI ( Agent ):
     # ======================================================================
 
     ############################ HELPER ########################################
-
-    def __recordMove(self):
-        self.record[self.pos]
-        for move in self.__get_adj():
-            self.record[move]
 
     def __get_adj(self):
         result = set()
@@ -92,7 +89,7 @@ class MyAI ( Agent ):
         return result
 
     def __calculate_cost(self, x, y):
-        danger = 1.0 - self.record[(x, y)]
+        danger = 1.0 - self.safety_value[(x, y)]
         danger *= 1000
         return danger
 
@@ -210,6 +207,34 @@ class MyAI ( Agent ):
 
     ############################ MOVEMENT ######################################
 
+
+    def make_move(self, move):
+        """
+        Helper function to update attributes and call methods
+        based on the move to make next
+        """
+        if move == Agent.Action.GRAB:
+            self.grabbed = True
+            self.goal = (1,1)
+            self.escape()
+        elif move == Agent.Action.FORWARD:
+            if self.direction == 0:
+                self.pos = (self.pos[0]+1, self.pos[1])
+            elif self.direction == 1:
+                self.pos = (self.pos[0], self.pos[1]+1)
+            elif self.direction == 2:
+                self.pos = (self.pos[0]-1, self.pos[1])
+            elif self.direction == 3:
+                self.pos = (self.pos[0], self.pos[1]-1)
+        elif move == Agent.Action.TURN_LEFT:
+            self.direction = (self.direction+1)%4
+        elif move == Agent.Action.TURN_RIGHT:
+            self.direction = (self.direction-1)%4
+        
+        self.last_move = move
+        
+        return move
+
     def calculate_safety(self, stench, breeze):
         """
         Will primitively calculate the danger of each space traveled based
@@ -223,13 +248,14 @@ class MyAI ( Agent ):
         None
         """
         if stench or breeze:
-            spaces = self.__get_adj().remove(self.prev_pos)
+            spaces = self.__get_adj().discard(self.prev_pos)
             for space in spaces:
                 if stench:
-                    self.record[space] *= 0.33
+                    self.safety_value[space] *= 0.33
                 if breeze:
-                    self.record[space] *= 0.33
 
+                    self.safety_value[space] *= 0.33
+    
     def update_frontier(self):
         """
         Updates the frontier with unexpanded spaces and sorts the frontier by the
@@ -239,17 +265,13 @@ class MyAI ( Agent ):
         None
         """
         for elem in self.__get_adj():
-            if elem not in self.record.keys():
+            if elem not in self.traversed:
                 self.frontier.append(elem)
-            self.record[elem] # Touch the spot
+            self.safety_value[elem] # Touch the spot
         self.frontier.sort(lambda x: -(self.__min_distance(self.pos[0],self.pos[1],x[0],x[1])))
 
-    def search_gold(self, stench, breeze, glitter, bump, scream):
-        # if the space is 'safe', then there's no breeze or stench
-        if self.last_move == Agent.Action.FORWARD:
-            if self.pos[0] not in self.record.keys() or self.pos[1] not in self.record[self.pos[0]]:
-                self.calculate_safety(stench, breeze)
-            self.__recordMove(self.pos[0], self.pos[1])
+    def search_gold(self, goal_x, goal_y):
+        self.move_list = self.__find_path(self.pos[0], self.pos[1], goal_x, goal_y)
 
     def escape(self):
         self.move_list = [(agent.Action.CLIMB, 1)]
