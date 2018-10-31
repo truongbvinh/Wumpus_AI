@@ -51,28 +51,45 @@ class MyAI ( Agent ):
         # ======================================================================
 
         # all parameters are boolean values
-        print("hello")
+        pass
 
         # This block grabs the gold and sets goal to 1,1
         if glitter:
             # print("glitter")
             return self.make_move(Agent.Action.GRAB)
-            
+        
+        # If there's a bump, then we know that we've found the parameters
+        # of the playing field
+        if bump:
+            if self.direction == 0:
+                self.x_max = self.pos[0]
+            elif self.direction == 1:
+                self.y_max = self.pos[1]
+            self.pos = self.prev_pos
+
+            if self.x_max and not self.goal[0] < self.x_max:
+                self.move_list = []
+            if self.y_max and not self.goal[1] < self.y_max:
+                self.move_list = []
+                
         # This block JUST fetches the next destination once one is reached
         while len(self.move_list) == 0:
             if len(self.frontier) == 0:
                 self.escape()
                 break
             self.goal = self.frontier.pop()
-            # print(self.goal, self.pos, self.direction)
+            if self.x_max and not self.goal[0] < self.x_max:
+                continue
+            if self.y_max and not self.goal[1] < self.y_max:
+                continue
             self.search_gold(self.goal[0], self.goal[1])
 
         # This block reevalutates the path based on breeze and stench info
-        if breeze or stench:
+        if (breeze or stench) and not bump:
             self.calculate_safety(stench, breeze)
-            print(self.goal, self.pos)
             self.search_gold(self.goal[0], self.goal[1])
         
+        # If the estimated cost is too great, then we don't want to risk it
         while self.__path_cost() > 500:
             if len(self.frontier) == 0:
                 self.escape()
@@ -81,7 +98,8 @@ class MyAI ( Agent ):
             self.search_gold(self.goal[0], self.goal[1])
         
         # print(self.move_list)
-        print(self.__path_cost(), self.move_list[-1][1])
+        # print("cost", self.__path_cost(), "next_cost", self.move_list[-1][1])
+        # self.__print_info()
 
         return self.make_move(self.move_list.pop()[0])
         # ======================================================================
@@ -93,6 +111,9 @@ class MyAI ( Agent ):
     # ======================================================================
 
     ############################ HELPER ########################################
+
+    def __print_info(self):
+        print("{}, {} --> {}, {}; next move: {} to {}".format(self.prev_pos, self.last_move, self.pos, self.direction, self.move_list[-1], self.goal))
 
     def __get_adj(self):
         result = set()
@@ -221,8 +242,9 @@ class MyAI ( Agent ):
                 traversed.add((right.x, right.y, right.direction))
 
             if ((forward.x, forward.y, forward.direction)) not in traversed and new_x > 0 and new_y > 0:
-                heapq.heappush(search, forward)
-                traversed.add((forward.x, forward.y, forward.direction))
+                if (not self.x_max or new_x < self.x_max) and (not self.y_max or new_y < self.y_max):
+                    heapq.heappush(search, forward)
+                    traversed.add((forward.x, forward.y, forward.direction))
 
         parent = record[-1].parent
         result = [(record[-1].action, record[-1].cost)]
@@ -248,7 +270,6 @@ class MyAI ( Agent ):
         """
         if move == Agent.Action.GRAB:
             self.grabbed = True
-            self.goal = (1,1)
             self.escape()
 
         elif move == Agent.Action.FORWARD:
@@ -317,7 +338,8 @@ class MyAI ( Agent ):
         self.move_list = self.__find_path(self.pos[0], self.pos[1], goal_x, goal_y, self.direction)
 
     def escape(self):
-        print("escaping")
+        # print("escaping")
+        self.goal = (1,1)
         self.move_list = [(Agent.Action.CLIMB, 1)]
         self.move_list.extend(self.__find_path(self.pos[0], self.pos[1], 1, 1, self.direction))
 
