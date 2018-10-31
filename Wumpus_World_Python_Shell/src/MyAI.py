@@ -90,11 +90,15 @@ class MyAI ( Agent ):
             self.search_gold(self.goal[0], self.goal[1])
         
         # If the estimated cost is too great, then we don't want to risk it
-        while self.__path_cost() > 500:
+        while self.__path_cost() > 500 or len(self.move_list) == 0:
             if len(self.frontier) == 0:
                 self.escape()
                 break
             self.goal = self.frontier.pop()
+            if self.x_max and not self.goal[0] < self.x_max:
+                continue
+            if self.y_max and not self.goal[1] < self.y_max:
+                continue
             self.search_gold(self.goal[0], self.goal[1])
         
         # print(self.move_list)
