@@ -34,7 +34,7 @@ class MyAI ( Agent ):
         self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
         self.goal = None
         self.frontier = [(1, 2), (2, 1)]
-        self.safety_value = defaultdict(lambda:1.0) # float is percentage that the square is safe
+        self.safety_value = defaultdict(lambda:(set(),1.0)) # float is percentage that the square is safe
         self.traversed = {(1, 1)}
         self.move_list = list()
         self.grabbed = False
@@ -314,14 +314,38 @@ class MyAI ( Agent ):
         None
         """
         if stench or breeze:
+            if stench:
+                self.safety_value[self.pos][0].add('stench') 
+            if breeze:
+                self.safety_value[self.pos][0].add('breeze')
             spaces = self.__get_adj()
             spaces.discard(self.prev_pos)
             for space in spaces:
-                if stench:
-                    self.safety_value[space] *= 0.33
-                if breeze:
+                self.safety_value[space][1] = 3 / 7
+                if self.update_nobreeze(space):
+                    spaces.remove(space)
+            
+            for space in spaces:
+                if len(spaces) == 3:
+                    self.safety_value[space][1] = min((3/7, self.safety_value[space][1]))
+                elif len(spaces) == 2:
+                    self.safety_value[space][1] = min((1/3, self.safety_value[space][1]))
+                elif len(spaces) == 1:
+                    self.safety_value[space][1] = 0
 
-                    self.safety_value[space] *= 0.33
+    def update_nobreeze(self, space):
+        """
+        Checks adjacent spaces for if there is not a breeze then updates space to 0
+        """
+        x, y = space
+
+        for adj in [(x, y-1), (x-1, y), (x, y+1), (x+1, y)]:
+            if adj == self.pos:
+                pass
+            elif 'no breeze' in self.safety_value[adj][0] and 'no stench' in self.safety_value[adj][0]:
+                self.safety_value[space][1] = 1
+                return True
+        return False        
     
     def update_frontier(self):
         """
