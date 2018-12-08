@@ -85,12 +85,12 @@ class MyAI ( Agent ):
             self.search_gold(self.goal[0], self.goal[1])
 
         # This block reevalutates the path based on breeze and stench info
-        if (breeze or stench) and not bump:
+        if not bump:
             self.calculate_safety(stench, breeze)
             self.search_gold(self.goal[0], self.goal[1])
         
         # If the estimated cost is too great, then we don't want to risk it
-        while self.__path_cost() > 500 or len(self.move_list) == 0:
+        while len(self.move_list) == 0 or self.__path_cost() > 500: # or self.__path_cost() > 500
             if len(self.frontier) == 0:
                 self.escape()
                 break
@@ -140,7 +140,7 @@ class MyAI ( Agent ):
         return result
 
     def __calculate_cost(self, x, y):
-        danger = 1.0 - self.safety_value[(x, y)]
+        danger = 1.0 - self.safety_value[(x, y)][1]
         danger *= 1000
         return danger
 
@@ -321,17 +321,17 @@ class MyAI ( Agent ):
             spaces = self.__get_adj()
             spaces.discard(self.prev_pos)
             for space in spaces:
-                self.safety_value[space][1] = 3 / 7
+                self.safety_value[space] = (self.safety_value[space][0], 3 / 7)
                 if self.update_nobreeze(space):
                     spaces.remove(space)
             
             for space in spaces:
                 if len(spaces) == 3:
-                    self.safety_value[space][1] = min((3/7, self.safety_value[space][1]))
+                    self.safety_value[space] = (self.safety_value[space][0], min((3/7, self.safety_value[space][1])))
                 elif len(spaces) == 2:
-                    self.safety_value[space][1] = min((1/3, self.safety_value[space][1]))
+                    self.safety_value[space] = (self.safety_value[space][0], min((1/3, self.safety_value[space][1])))
                 elif len(spaces) == 1:
-                    self.safety_value[space][1] = 0
+                    self.safety_value[space] = (self.safety_value[space][0], 0)
 
     def update_nobreeze(self, space):
         """
