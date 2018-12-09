@@ -50,12 +50,12 @@ class MyAI ( Agent ):
         # ======================================================================
         # YOUR CODE BEGINS
         # ======================================================================
-        self.print_agent()
-        if breeze:
-            print("Breeze")
-        if stench:
-            print("Stench")
-        input()
+        # self.print_agent()
+        # if breeze:
+        #     print("Breeze")
+        # if stench:
+        #     print("Stench")
+        # input()
 
         # This block grabs the gold and sets goal to 1,1
         if glitter:
@@ -360,7 +360,7 @@ class MyAI ( Agent ):
                 self.safety_value[self.pos][0].add("no breeze")
             for space in self.__get_adj():
                 if space in self.safety_value.keys() and self.safety_value[space][1] != 1:
-                    print("checkingngngngnng")
+                    # print("checkingngngngnng")
                     self.update_nobreeze(space)
 
     def update_nobreeze(self, space):
