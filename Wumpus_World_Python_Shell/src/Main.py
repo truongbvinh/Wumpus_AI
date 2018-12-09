@@ -44,6 +44,7 @@ import sys
 import os
 import math
 from World import World
+import time
 
 def main ( ):
     args = sys.argv
@@ -52,8 +53,8 @@ def main ( ):
         # Run on a random world and exit
         world = World()
         score = world.run()
-        print ("Your agent scored: " + str(score))
-        return
+        # print ("Your agent scored: " + str(score))
+        return score
 
     # Important Variables
     debug      = False
@@ -195,6 +196,7 @@ def main ( ):
 
         if outputFile == "":
             print ( "The agent scored: " + str(score) )
+            return score
         else:
             try:
                 outFile = open ( outputFile, 'w' )
@@ -205,4 +207,9 @@ def main ( ):
     except Exception:
         print ( "[ERROR] Failure to open file." )
 
-main()
+start = time.time()
+total = 0
+for i in range(10000):
+    total += main()
+print(total / 10000)
+print("{} seconds".format(time.time() - start))
