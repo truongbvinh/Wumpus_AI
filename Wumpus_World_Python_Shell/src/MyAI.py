@@ -49,9 +49,7 @@ class MyAI ( Agent ):
         # ======================================================================
         # YOUR CODE BEGINS
         # ======================================================================
-
-        # all parameters are boolean values
-        pass
+        self.print_agent()
 
         # This block grabs the gold and sets goal to 1,1
         if glitter:
@@ -115,6 +113,31 @@ class MyAI ( Agent ):
     # ======================================================================
 
     ############################ HELPER ########################################
+    def print_agent(self):
+        upper_y = max(self.traversed, key=lambda x: x[1])[1]
+        upper_x = max(self.traversed, key=lambda x: x[0])[0]
+        for y in range(upper_y, 0, -1):
+            for x in range(upper_x, 0, -1):
+                if (x, y) == self.pos:
+                    print("X", end=" ")
+                elif (x, y) in self.safety_value.keys():
+                    if "breeze" in (self.safety_value[(x, y)][0]):
+                        if "stench" in (self.safety_value[(x, y)][0]):
+                            print(0, end = " ")
+                        else:
+                            print(1, end = " ")
+                    else:
+                        if "stench" in (self.safety_value[(x, y)][0]):
+                            print(2, end = " ")
+                        else:
+                            print(3, end = " ")
+                else:
+                    print("-", end=" ")
+            print()
+        print(self.pos, "\n")
+                
+
+
 
     def __print_info(self):
         print("{}, {} --> {}, {}; next move: {} to {}".format(self.prev_pos, self.last_move, self.pos, self.direction, self.move_list[-1], self.goal))
@@ -122,14 +145,6 @@ class MyAI ( Agent ):
     def __get_adj(self):
         result = set()
         x, y = self.pos
-        # if self.pos[0] > 1:
-        #     result.add((x-1,y))
-        # if self.pos[1] > 1:
-        #     result.add((x,y-1))
-        # if self.x_max and self.pos[0] < self.x_max:
-        #     result.add((x+1,y))
-        # if self.y_max and self.pos[1] < self.y_max:
-        #     result.add((x,y+1))
         result.add((x+1, y))
         result.add((x, y+1))
         if x > 1:
@@ -193,9 +208,9 @@ class MyAI ( Agent ):
         Node = namedtuple("Node", ["f", "cost", "x", "y", "direction", "parent", "action"])
         record = []
         search = []
-        traversed = set()
+        traveled = set()
         search.append(Node(self.__min_distance(x1, y1, x2, y2, facing), 0, x1, y1, facing, None, None))
-        traversed.add((x1, y1, facing))
+        traveled.add((x1, y1, facing))
         while len(search) != 0:
             expand = heapq.heappop(search)
 
@@ -237,18 +252,18 @@ class MyAI ( Agent ):
                 record.append(forward)
                 break
             
-            if ((left.x, left.y, left.direction)) not in traversed:
+            if ((left.x, left.y, left.direction)) not in traveled:
                 heapq.heappush(search, left)
-                traversed.add((left.x, left.y, left.direction))
+                traveled.add((left.x, left.y, left.direction))
 
-            if ((right.x, right.y, right.direction)) not in traversed:
+            if ((right.x, right.y, right.direction)) not in traveled:
                 heapq.heappush(search, right)
-                traversed.add((right.x, right.y, right.direction))
+                traveled.add((right.x, right.y, right.direction))
 
-            if ((forward.x, forward.y, forward.direction)) not in traversed and new_x > 0 and new_y > 0:
+            if ((forward.x, forward.y, forward.direction)) not in traveled and new_x > 0 and new_y > 0:
                 if (not self.x_max or new_x < self.x_max) and (not self.y_max or new_y < self.y_max):
                     heapq.heappush(search, forward)
-                    traversed.add((forward.x, forward.y, forward.direction))
+                    traveled.add((forward.x, forward.y, forward.direction))
 
         parent = record[-1].parent
         result = [(record[-1].action, record[-1].cost)]
@@ -332,6 +347,10 @@ class MyAI ( Agent ):
                     self.safety_value[space] = (self.safety_value[space][0], min((1/3, self.safety_value[space][1])))
                 elif len(spaces) == 1:
                     self.safety_value[space] = (self.safety_value[space][0], 0)
+        elif not stench:
+            self.safety_value[self.pos][0].add("no stench")
+        elif not breeze:
+            self.safety_value[self.pos][0].add("no breeze")
 
     def update_nobreeze(self, space):
         """
