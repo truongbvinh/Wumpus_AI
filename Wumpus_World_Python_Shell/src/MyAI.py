@@ -50,6 +50,11 @@ class MyAI ( Agent ):
         # YOUR CODE BEGINS
         # ======================================================================
         self.print_agent()
+        if breeze:
+            print("Breeze")
+        if stench:
+            print("Stench")
+        input()
 
         # This block grabs the gold and sets goal to 1,1
         if glitter:
@@ -117,20 +122,21 @@ class MyAI ( Agent ):
         upper_y = max(self.traversed, key=lambda x: x[1])[1]
         upper_x = max(self.traversed, key=lambda x: x[0])[0]
         for y in range(upper_y, 0, -1):
-            for x in range(upper_x, 0, -1):
+            for x in range(1, upper_x+1):
                 if (x, y) == self.pos:
                     print("X", end=" ")
                 elif (x, y) in self.safety_value.keys():
-                    if "breeze" in (self.safety_value[(x, y)][0]):
-                        if "stench" in (self.safety_value[(x, y)][0]):
-                            print(0, end = " ")
-                        else:
-                            print(1, end = " ")
-                    else:
-                        if "stench" in (self.safety_value[(x, y)][0]):
-                            print(2, end = " ")
-                        else:
-                            print(3, end = " ")
+                    # if "breeze" in (self.safety_value[(x, y)][0]):
+                    #     if "stench" in (self.safety_value[(x, y)][0]):
+                    #         print(0, end = " ")
+                    #     else:
+                    #         print(1, end = " ")
+                    # else:
+                    #     if "stench" in (self.safety_value[(x, y)][0]):
+                    #         print(2, end = " ")
+                    #     else:
+                    #         print(3, end = " ")
+                    print(int(self.safety_value[(x, y)][1]), end = " ")
                 else:
                     print("-", end=" ")
             print()
@@ -335,10 +341,13 @@ class MyAI ( Agent ):
                 self.safety_value[self.pos][0].add('breeze')
             spaces = self.__get_adj()
             spaces.discard(self.prev_pos)
+            rmv = set()
             for space in spaces:
                 self.safety_value[space] = (self.safety_value[space][0], 3 / 7)
                 if self.update_nobreeze(space):
-                    spaces.remove(space)
+                    rmv.add(space)
+            for space in rmv:
+                spaces.remove(space)
             
             for space in spaces:
                 if len(spaces) == 3:
@@ -347,10 +356,15 @@ class MyAI ( Agent ):
                     self.safety_value[space] = (self.safety_value[space][0], min((1/3, self.safety_value[space][1])))
                 elif len(spaces) == 1:
                     self.safety_value[space] = (self.safety_value[space][0], 0)
-        elif not stench:
-            self.safety_value[self.pos][0].add("no stench")
-        elif not breeze:
-            self.safety_value[self.pos][0].add("no breeze")
+        else:
+            if not stench:
+                self.safety_value[self.pos][0].add("no stench")
+            if not breeze:
+                self.safety_value[self.pos][0].add("no breeze")
+            for space in self.__get_adj():
+                if space in self.safety_value.keys() and self.safety_value[space][1] != 1:
+                    print("checkingngngngnng")
+                    self.update_nobreeze(space)
 
     def update_nobreeze(self, space):
         """
@@ -359,10 +373,8 @@ class MyAI ( Agent ):
         x, y = space
 
         for adj in [(x, y-1), (x-1, y), (x, y+1), (x+1, y)]:
-            if adj == self.pos:
-                pass
-            elif 'no breeze' in self.safety_value[adj][0] and 'no stench' in self.safety_value[adj][0]:
-                self.safety_value[space][1] = 1
+            if adj in self.safety_value.keys() and 'no breeze' in self.safety_value[adj][0] and 'no stench' in self.safety_value[adj][0]:
+                self.safety_value[space] = (self.safety_value[space][0], 1)
                 return True
         return False        
     
