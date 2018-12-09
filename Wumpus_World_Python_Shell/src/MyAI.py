@@ -34,6 +34,7 @@ class MyAI ( Agent ):
         self.direction = 0 # 0 == right, 1 == up, 2 == left, 3 == down
         self.goal = None
         self.frontier = [(1, 2), (2, 1)]
+        self.secondary_frontier = list()
         self.safety_value = defaultdict(lambda:(set(),1.0)) # float is percentage that the square is safe
         self.traversed = {(1, 1)}
         self.move_list = list()
@@ -76,27 +77,36 @@ class MyAI ( Agent ):
                 self.move_list = []
                 
         # This block JUST fetches the next destination once one is reached
-        while len(self.move_list) == 0:
-            if len(self.frontier) == 0:
-                self.escape()
-                break
-            self.goal = self.frontier.pop()
-            if self.x_max and not self.goal[0] < self.x_max:
-                continue
-            if self.y_max and not self.goal[1] < self.y_max:
-                continue
-            self.search_gold(self.goal[0], self.goal[1])
+        # while len(self.move_list) == 0:
+        #     if len(self.frontier) == 0:
+        #         self.escape()
+        #         break
+        #     self.goal = self.frontier.pop()
+        #     if self.x_max and not self.goal[0] < self.x_max:
+        #         continue
+        #     if self.y_max and not self.goal[1] < self.y_max:
+        #         continue
+        #     self.search_gold(self.goal[0], self.goal[1])
 
         # This block reevalutates the path based on breeze and stench info
         if not bump:
             self.calculate_safety(stench, breeze)
-            self.search_gold(self.goal[0], self.goal[1])
+            if self.goal != None:
+                self.search_gold(self.goal[0], self.goal[1])
         
         # If the estimated cost is too great, then we don't want to risk it
-        while len(self.move_list) == 0 or self.__path_cost() > 500: # or self.__path_cost() > 500
+        while len(self.move_list) == 0 or self.__path_cost(self.move_list) > 500: # or self.__path_cost() > 500
             if len(self.frontier) == 0:
-                self.escape()
-                break
+                for goal in self.secondary_frontier:
+                    if self.__path_cost(self.__find_path(self.pos[0], self.pos[0], goal[0], goal[1], self.direction)) < 500:
+                        self.frontier.append(goal)
+                        self.secondary_frontier.remove(goal)
+                        break
+                else:
+                    self.escape()
+                    break
+            if not len(self.move_list) == 0 and self.__path_cost(self.move_list) > 500:
+                self.secondary_frontier.append(self.goal)
             self.goal = self.frontier.pop()
             if self.x_max and not self.goal[0] < self.x_max:
                 continue
@@ -126,24 +136,11 @@ class MyAI ( Agent ):
                 if (x, y) == self.pos:
                     print("X", end=" ")
                 elif (x, y) in self.safety_value.keys():
-                    # if "breeze" in (self.safety_value[(x, y)][0]):
-                    #     if "stench" in (self.safety_value[(x, y)][0]):
-                    #         print(0, end = " ")
-                    #     else:
-                    #         print(1, end = " ")
-                    # else:
-                    #     if "stench" in (self.safety_value[(x, y)][0]):
-                    #         print(2, end = " ")
-                    #     else:
-                    #         print(3, end = " ")
                     print(int(self.safety_value[(x, y)][1]), end = " ")
                 else:
                     print("-", end=" ")
             print()
         print(self.pos, "\n")
-                
-
-
 
     def __print_info(self):
         print("{}, {} --> {}, {}; next move: {} to {}".format(self.prev_pos, self.last_move, self.pos, self.direction, self.move_list[-1], self.goal))
@@ -280,9 +277,9 @@ class MyAI ( Agent ):
 
         return result
 
-    def __path_cost(self):
+    def __path_cost(self, movelist):
         total = 0
-        for move in self.move_list:
+        for move in movelist:
             total += move[1]
         return total
     ############################ MOVEMENT ######################################
